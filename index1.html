@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>مغامرة رفيف 💖</title>
+<style>
+  :root{
+    --pink1:#ffe6f0; --pink2:#ffd1e6; --accent:#ff0066; --btn:#ff66a3; --btn-hover:#ff3385; --text:#88002b;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:40px 20px; font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+    background: linear-gradient(180deg, var(--pink1), var(--pink2));
+    color:var(--text); display:flex; justify-content:center; align-items:flex-start; min-height:100vh;
+  }
+  .wrap{ width:100%; max-width:820px; }
+  h1{ text-align:center; font-size:2.2rem; margin:6px 0 18px; }
+  .heart{ color:var(--accent); font-size:1.6rem; animation:beat 1s infinite; vertical-align:middle; }
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+  .card{
+    background:#fff0f5; padding:22px; border-radius:18px; box-shadow:0 10px 30px rgba(200,0,100,0.15);
+  }
+  #game-message{
+    min-height:140px; font-size:1.1rem; line-height:1.55; white-space:pre-line;
+    padding:14px; border-radius:12px; background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,245,250,0.9));
+    margin-bottom:14px; cursor:pointer; user-select:none;
+  }
+  #game-buttons{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+  button{
+    background:var(--btn); color:#fff; border:0; padding:12px 20px; border-radius:12px; font-size:1rem;
+    cursor:pointer; transition:background .18s, transform .08s;
+  }
+  button:hover{ background:var(--btn-hover); transform:translateY(-3px); }
+  button:disabled{ opacity:.6; cursor:not-allowed; transform:none; }
+  audio{ margin-top:12px; width:100%; display:block; }
+  /* bubbles & falling hearts (light) */
+  .bubble{ position:fixed; bottom:-60px; width:14px; height:14px; border-radius:50%; background:var(--btn); opacity:.75; pointer-events:none; z-index:0; }
+  .falling-heart{ position:fixed; top:-40px; font-size:18px; pointer-events:none; z-index:0; opacity:.95; }
+  /* responsive */
+  @media (max-width:520px){
+    body{ padding:18px 12px; }
+    h1{ font-size:1.6rem; }
+    #game-message{ min-height:120px; font-size:1rem; }
+    button{ padding:10px 14px; font-size:.95rem; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>مغامرة رفيف الرقمية <span class="heart">❤</span></h1>
+    <div class="card">
+      <div id="game-message">مرحبًا رفيف! 🌸
+انقري هنا أو اضغطي على "ابدأي المغامرة" للبدء.
+(يمكنك النقر على النص أثناء الكتابة لتظهر الرسالة فورًا)</div>
+      <div id="game-buttons">
+        <button id="start-btn">ابدأي المغامرة</button>
+      </div>
+      <audio id="love-audio" controls style="display:none">
+        <source src="romantic_message.mp3" type="audio/mpeg">
+        متصفحك لا يدعم تشغيل الصوت.
+      </audio>
+    </div>
+  </div>
+
+<script>
+/* ==== إعدادات وسيناريو اللعبة ==== */
+const stages = [
+  {message:"اختر لونك المفضل 🌈", options:[{text:"أزرق", reply:"أحب روحك الهادئة 💙"},{text:"وردي", reply:"الوردي يناسب جمال قلبك 🌸"},{text:"أحمر", reply:"أحب شغفك وحيويتك ❤️"}]},
+  {message:"اختر مكان تتخيليننا فيه 🌍", options:[{text:"حديقة", reply:"أتخيل ضحكتك بجانبي 🌿"},{text:"مقهى", reply:"حديثنا الطويل والممتع ☕"},{text:"شاطئ", reply:"نمشي على الشاطئ معًا 🌊"}]},
+  {message:"اختر هواية تحبينها 🎨", options:[{text:"الرسم", reply:"أحب روحك الإبداعية 🎨"},{text:"القراءة", reply:"شغفك بالمعرفة 📚"},{text:"الألعاب", reply:"روح المرح لديك 🎮"}]},
+  {message:"اختر يومك المثالي ☀️", options:[{text:"مشمس", reply:"أحب طاقتك المشرقة 🌞"},{text:"ممطر", reply:"أحب رقتك وهدوءك ☔"},{text:"غروب الشمس", reply:"لحظاتك الساحرة 🌅"}]},
+  {message:"اختر رمز تعبيري تعبّرين به عن نفسك 😘", options:[{text:"❤", reply:"رمز قلبك يجعلني أبتسم ❤"},{text:"🌸", reply:"زهورك تجعل العالم أجمل 🌸"},{text:"✨", reply:"سحر وجودك مضيء ✨"}]},
+  {message:"اختر نوع الموسيقى 🎵", options:[{text:"هادئة", reply:"أحب هدوءك وروحك العذبة 🎶"},{text:"رومانسية", reply:"تجعلك أقرب لقلبي 💗"},{text:"مرحة", reply:"أحب طاقتك المرحة 🌟"}]},
+  {message:"اختر مشروبك المفضل ☕", options:[{text:"قهوة", reply:"حبك للأشياء البسيطة ☕"},{text:"شاي", reply:"شايك يدفئ قلبي 💛"},{text:"عصير", reply:"عصيرك ينعش يومي 🍹"}]},
+  {message:"اختر وصف شخصيتك 🌟", options:[{text:"هادئة", reply:"هدوءك يجعل كل شيء جميل 🌸"},{text:"مرحة", reply:"ضحكتك تضيء أي مكان 😄"},{text:"غامضة", reply:"سرّك يجعلني مفتون بك 🕊️"}]},
+  {message:"اختر حيوان تحبينه 🐾", options:[{text:"قطة", reply:"لطافتك تشبه القطة الصغيرة 🐱"},{text:"كلب", reply:"ولاؤك يذكرني بالكلب الوفي 🐶"},{text:"طائر", reply:"حرية قلبك كطائر جميل 🕊️"}]},
+  {message:"اختر موسمك المفضل 🌸", options:[{text:"الربيع", reply:"كما الربيع، حضورك يملأ المكان جمالًا 🌷"},{text:"الصيف", reply:"كما الصيف، طاقتك دافئة ومشرقة ☀️"},{text:"الخريف", reply:"كما الخريف، أنتِ ساحرة 🍁"}]},
+  {message:"اختر شيء يجعلك سعيدة اليوم 🌈", options:[{text:"ضحك", reply:"ضحكتك تجعل كل يوم أفضل 😄"},{text:"هدوء", reply:"هدوءك يريح قلبي 💖"},{text:"مغامرة", reply:"مغامرتك تجعلني متحمسًا 🎉"}]},
+  {message:"اختر لون قلبك 💓", options:[{text:"أحمر", reply:"قلبك الأحمر ينير أي مكان ❤️"},{text:"وردي", reply:"قلبك الوردي يشبه الورود 🌸"},{text:"بنفسجي", reply:"قلبك البنفسجي سحري 💜"}]},
+  {message:"اختر كلمة تصف يومنا 🌞", options:[{text:"مشرق", reply:"يومنا مشرق بوجودك 🌞"},{text:"هادئ", reply:"يومنا هادئ معًا 💖"},{text:"مغامر", reply:"يومنا مليء بالمغامرة 🎉"}]},
+  {message:"اختر رمزية أخيرة 💌", options:[{text:"❤", reply:"❤ قلبي لك"},{text:"🌸", reply:"زهرتي لك 🌸"},{text:"✨", reply:"سحري لك ✨"}]}
+];
+
+const gameMessage = document.getElementById('game-message');
+const gameButtons = document.getElementById('game-buttons');
+const loveAudio = document.getElementById('love-audio');
+const startBtn = document.getElementById('start-btn');
+
+let currentStage = 0;
+let typing = false;
+let skipTyping = false;
+
+/* نوع بسيط من الضبابية/توّهج عند الكتابة — نطبّق عن طريق تغيير ظل النص مؤقتًا */
+function applyGlowOnce() {
+  gameMessage.style.transition = 'text-shadow .18s';
+  gameMessage.style.textShadow = '0 0 8px rgba(255,80,150,0.25)';
+  setTimeout(()=>gameMessage.style.textShadow = 'none', 220);
+}
+
+/* دالة الطباعة حرفاً حرفاً (Promise) */
+function typeWriter(text, speed = 18){
+  return new Promise(resolve=>{
+    typing = true; skipTyping = false;
+    gameMessage.textContent = ''; // استخدم textContent مع white-space: pre-line
+    let i = 0;
+    applyGlowOnce();
+    function step(){
+      if(skipTyping){
+        gameMessage.textContent = text;
+        typing = false;
+        resolve();
+        return;
+      }
+      if(i < text.length){
+        gameMessage.textContent += text.charAt(i);
+        i++;
+        setTimeout(step, speed);
+      } else {
+        typing = false;
+        resolve();
+      }
+    }
+    step();
+  });
+}
+
+/* عند النقر على صندوق الرسالة أثناء الطباعة -> اكتمال فوري */
+gameMessage.addEventListener('click', ()=>{
+  if(typing) skipTyping = true;
+});
+
+/* إنشاء فقاعات وقلوب خفيفة في الخلفية */
+function spawnBubbles(count=22){
+  for(let i=0;i<count;i++){
+    const b=document.createElement('div'); b.className='bubble';
+    b.style.left = Math.random()*100 + 'vw';
+    b.style.bottom = (-20 - Math.random()*80) + 'px';
+    b.style.width = (8 + Math.random()*24) + 'px';
+    b.style.height = b.style.width;
+    b.style.opacity = (0.45 + Math.random()*0.45);
+    b.style.transition = 'transform linear';
+    const dur = 4000 + Math.random()*8000;
+    b.style.animation = `rise ${dur}ms linear forwards`;
+    document.body.appendChild(b);
+    // تحريك يدوي بسيط لأننا لم نعرّف keyframes لكل عنصر
+    const rise = () => {
+      b.animate([{transform:`translateY(0)`, opacity:b.style.opacity},{transform:`translateY(-110vh)`, opacity:0}], {duration:dur, iterations:1, easing:'linear'});
+      setTimeout(()=>b.remove(), dur + 80);
+    };
+    setTimeout(rise, Math.random()*1000);
+  }
+}
+function spawnHearts(interval=450){
+  const t = setInterval(()=>{
+    const h = document.createElement('div'); h.className='falling-heart';
+    h.style.left = Math.random()*100 + 'vw';
+    h.style.top = '-30px';
+    const size = 14 + Math.random()*30;
+    h.style.fontSize = size+'px';
+    h.style.color = `hsl(${Math.random()*350},100%,70%)`;
+    h.textContent = '❤';
+    document.body.appendChild(h);
+    const dur = 3800 + Math.random()*5200;
+    h.animate([{transform:'translateY(0) rotate(0deg)', opacity:1},{transform:`translateY(110vh) translateX(${(-50+Math.random()*100)}px) rotate(${(Math.random()*720 - 360)}deg)`, opacity:0}], {duration:dur, iterations:1, easing:'linear'});
+    setTimeout(()=>h.remove(), dur + 80);
+  }, interval);
+  // لا نعيد clearInterval — خفيف ومؤثر. إذا واجهت مشاكل بالذاكرة، يمكننا إيقافه لاحقًا.
+}
+spawnBubbles(20);
+spawnHearts(420);
+
+/* عرض المرحلة index (رسالة السؤال ثم أزرار الخيارات) */
+async function showStage(index){
+  // حماية
+  if(index < 0) index = 0;
+  if(index >= stages.length){
+    // النهاية
+    const final = `رفيف 💖، حتى لو علاقتنا لم تبدأ بعد،
+أريدك أن تعرفي أن قلبي يهتم بك،
+وأفكاري غالبًا تكون معك.
+أنتِ جميلة بطريقة لا توصف، وجودك يجعل اليوم أجمل 🌸
+كل لحظة أفكر فيها بك تجعل قلبي يبتسم 💌
+هذه ليست مجرد كلمات، بل مشاعري الصادقة لك 💖
+عيد ميلاد سعيد حياتي 🎉💖`;
+    gameButtons.innerHTML = '';
+    await typeWriter(final, 20);
+    // عرض زر التشغيل الصوتي و زر إعادة التشغيل
+    gameButtons.innerHTML = `<button id="play-a">استمعي لمفاجأتي 🎵</button>
+                             <button id="replay">إعادة المحاولة ↻</button>`;
+    document.getElementById('play-a').onclick = ()=>{ loveAudio.style.display='block'; loveAudio.play().catch(()=>{}); };
+    document.getElementById('replay').onclick = ()=>{ currentStage = 0; gameButtons.innerHTML = `<button id="start-btn-2">ابدأي المغامرة</button>`; document.getElementById('start-btn-2').onclick = ()=>showStage(0); gameMessage.textContent = 'مرحبًا رفيف! 🌸\\nانقري ابدأي للمغامرة مجددًا.'; };
+    return;
+  }
+
+  // نكتب نص السؤال ثم نظهر الأزرار
+  gameButtons.innerHTML = '';
+  await typeWriter(stages[index].message, 20);
+  // إنشاء الأزرار
+  gameButtons.innerHTML = '';
+  stages[index].options.forEach((opt, i)=>{
+    const btn = document.createElement('button');
+    btn.textContent = opt.text;
+    btn.onclick = async ()=>{
+      // منع النقرات المزدوجة أثناء الطباعة/الانتقال
+      if(typing) return;
+      // قم بإظهار رد الاختيار ثم انتقل للمرحلة التالية
+      gameButtons.innerHTML = ''; // اخفاء الأزرار فور الضغط
+      await typeWriter(opt.reply, 20);
+      // Pause صغير قبل الانتقال
+      await new Promise(r=>setTimeout(r, 550));
+      currentStage = index + 1;
+      showStage(currentStage);
+    };
+    gameButtons.appendChild(btn);
+  });
+}
+
+/* زر البداية */
+startBtn.addEventListener('click', ()=>{
+  startBtn.disabled = true;
+  currentStage = 0;
+  showStage(0);
+});
+
+/* إظهار/إخفاء العنصر الصوتي افتراضًا عند الاستخدام */
+loveAudio.addEventListener('play', ()=>{ loveAudio.style.display='block'; });
+
+</script>
+</body>
+</html>
